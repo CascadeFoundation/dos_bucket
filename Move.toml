@@ -1,0 +1,12 @@
+[package]
+name = "DosBucket"
+license = "Cascade DOL"
+authors = ["Cascade Foundation <dos@cascade.foundation>"]
+edition = "2024.beta"
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet", override = true}
+Walrus = { git = "https://github.com/MystenLabs/walrus-docs.git", subdir = "contracts/walrus", rev = "main" }
+
+[addresses]
+dos_bucket = "0x0"
