@@ -1,6 +1,6 @@
 module dos_bucket::bucket;
 
-use dos_bucket::admin::AdminCap;
+use dos_bucket::admin::BucketAdminCap;
 use sui::object_table::{Self, ObjectTable};
 use walrus::blob::Blob;
 
@@ -31,7 +31,7 @@ public fun new(ctx: &mut TxContext): Bucket {
 }
 
 // Add a `Blob` to a `Bucket`.
-public fun add_blob(self: &mut Bucket, cap: &AdminCap, blob: Blob) {
+public fun add_blob(self: &mut Bucket, cap: &BucketAdminCap, blob: Blob) {
     cap.authorize(self.id());
 
     self.blob_count = self.blob_count + 1;
@@ -39,7 +39,7 @@ public fun add_blob(self: &mut Bucket, cap: &AdminCap, blob: Blob) {
 }
 
 // Remove a `Blob` from a `Bucket`.
-public fun remove_blob(self: &mut Bucket, cap: &AdminCap, blob_id: u256): Blob {
+public fun remove_blob(self: &mut Bucket, cap: &BucketAdminCap, blob_id: u256): Blob {
     cap.authorize(self.id());
 
     self.blob_count = self.blob_count - 1;
@@ -49,7 +49,7 @@ public fun remove_blob(self: &mut Bucket, cap: &AdminCap, blob_id: u256): Blob {
 // Borrow a `Blob` from a `Bucket`.
 public fun borrow_blob(
     self: &mut Bucket,
-    cap: &AdminCap,
+    cap: &BucketAdminCap,
     blob_id: u256,
 ): (Blob, ReturnBlobPromise) {
     cap.authorize(self.id());
@@ -63,7 +63,12 @@ public fun borrow_blob(
 }
 
 // Return a `Blob` to a `Bucket`.
-public fun return_blob(self: &mut Bucket, cap: &AdminCap, promise: ReturnBlobPromise, blob: Blob) {
+public fun return_blob(
+    self: &mut Bucket,
+    cap: &BucketAdminCap,
+    promise: ReturnBlobPromise,
+    blob: Blob,
+) {
     cap.authorize(self.id());
 
     assert!(promise.bucket_id == self.id(), EInvalidBucket);
@@ -75,7 +80,7 @@ public fun return_blob(self: &mut Bucket, cap: &AdminCap, promise: ReturnBlobPro
 }
 
 // Get a mutable reference to the `UID` of a `Bucket`.
-public fun uid_mut(self: &mut Bucket, cap: &AdminCap): &mut UID {
+public fun uid_mut(self: &mut Bucket, cap: &BucketAdminCap): &mut UID {
     cap.authorize(self.id());
 
     &mut self.id

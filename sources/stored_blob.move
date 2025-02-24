@@ -1,6 +1,6 @@
 module dos_bucket::stored_blob;
 
-use dos_bucket::admin::AdminCap;
+use dos_bucket::admin::BucketAdminCap;
 use dos_bucket::bucket::Bucket;
 
 // A `StoredBlob` is a reference to a `Blob` that's been stored in a `Bucket`.
@@ -16,7 +16,12 @@ public struct StoredBlob has key, store {
     blob_encoding_type: u8,
 }
 
-public fun new(cap: &AdminCap, bucket: &Bucket, blob_id: u256, ctx: &mut TxContext): StoredBlob {
+public fun new(
+    cap: &BucketAdminCap,
+    bucket: &Bucket,
+    blob_id: u256,
+    ctx: &mut TxContext,
+): StoredBlob {
     cap.authorize(bucket.id());
     // Get a reference to the `Blob` from the `Bucket`.
     let blob = bucket.blobs().borrow(blob_id);
@@ -28,6 +33,11 @@ public fun new(cap: &AdminCap, bucket: &Bucket, blob_id: u256, ctx: &mut TxConte
         blob_size: blob.size(),
         blob_encoding_type: blob.encoding_type(),
     }
+}
+
+public fun destroy(self: StoredBlob) {
+    let StoredBlob { id, .. } = self;
+    id.delete();
 }
 
 public fun id(self: &StoredBlob): ID {
