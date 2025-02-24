@@ -1,6 +1,5 @@
 module dos_bucket::bucket;
 
-use dos_bucket::admin::BucketAdminCap;
 use sui::object_table::{Self, ObjectTable};
 use walrus::blob::Blob;
 
@@ -13,6 +12,11 @@ public struct Bucket has key, store {
     blobs: ObjectTable<u256, Blob>,
 }
 
+public struct BucketAdminCap has key, store {
+    id: UID,
+    bucket_id: ID,
+}
+
 public struct ReturnBlobPromise {
     blob_id: u256,
     bucket_id: ID,
@@ -22,17 +26,24 @@ const EInvalidBucket: u64 = 0;
 const EInvalidBlob: u64 = 1;
 
 // Create a new `Bucket`.
-public fun new(ctx: &mut TxContext): Bucket {
-    Bucket {
+public fun new(ctx: &mut TxContext): (Bucket, BucketAdminCap) {
+    let bucket = Bucket {
         id: object::new(ctx),
         blobs: object_table::new(ctx),
         blob_count: 0,
-    }
+    };
+
+    let bucket_admin_cap = BucketAdminCap {
+        id: object::new(ctx),
+        bucket_id: bucket.id(),
+    };
+
+    (bucket, bucket_admin_cap)
 }
 
 // Add a `Blob` to a `Bucket`.
 public fun add_blob(self: &mut Bucket, cap: &BucketAdminCap, blob: Blob) {
-    cap.authorize(self.id());
+    self.authorize(cap);
 
     self.blob_count = self.blob_count + 1;
     self.blobs.add(blob.blob_id(), blob);
@@ -40,7 +51,7 @@ public fun add_blob(self: &mut Bucket, cap: &BucketAdminCap, blob: Blob) {
 
 // Remove a `Blob` from a `Bucket`.
 public fun remove_blob(self: &mut Bucket, cap: &BucketAdminCap, blob_id: u256): Blob {
-    cap.authorize(self.id());
+    self.authorize(cap);
 
     self.blob_count = self.blob_count - 1;
     self.blobs.remove(blob_id)
@@ -52,7 +63,7 @@ public fun borrow_blob(
     cap: &BucketAdminCap,
     blob_id: u256,
 ): (Blob, ReturnBlobPromise) {
-    cap.authorize(self.id());
+    self.authorize(cap);
 
     let blob = self.blobs.remove(blob_id);
     let promise = ReturnBlobPromise {
@@ -69,7 +80,7 @@ public fun return_blob(
     promise: ReturnBlobPromise,
     blob: Blob,
 ) {
-    cap.authorize(self.id());
+    self.authorize(cap);
 
     assert!(promise.bucket_id == self.id(), EInvalidBucket);
     assert!(self.blobs.contains(promise.blob_id), EInvalidBlob);
@@ -81,7 +92,7 @@ public fun return_blob(
 
 // Get a mutable reference to the `UID` of a `Bucket`.
 public fun uid_mut(self: &mut Bucket, cap: &BucketAdminCap): &mut UID {
-    cap.authorize(self.id());
+    self.authorize(cap);
 
     &mut self.id
 }
@@ -99,4 +110,8 @@ public fun id(self: &Bucket): ID {
 // Get the number of `Blob` objects in a `Bucket`.
 public fun blob_count(self: &Bucket): u64 {
     self.blob_count
+}
+
+public(package) fun authorize(self: &Bucket, cap: &BucketAdminCap) {
+    assert!(self.id() == cap.bucket_id, EInvalidBucket);
 }
