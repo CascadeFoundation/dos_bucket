@@ -1,5 +1,6 @@
 module dos_bucket::bucket;
 
+use sui::event::emit;
 use sui::object_table::{Self, ObjectTable};
 use walrus::blob::Blob;
 
@@ -22,6 +23,11 @@ public struct ReturnBlobPromise {
     bucket_id: ID,
 }
 
+public struct BucketCreatedEvent has copy, drop {
+    bucket_id: ID,
+    bucket_admin_cap_id: ID,
+}
+
 const EInvalidBucket: u64 = 0;
 const EInvalidBlob: u64 = 1;
 
@@ -35,8 +41,13 @@ public fun new(ctx: &mut TxContext): (Bucket, BucketAdminCap) {
 
     let bucket_admin_cap = BucketAdminCap {
         id: object::new(ctx),
-        bucket_id: bucket.id(),
+        bucket_id: bucket.id.to_inner(),
     };
+
+    emit(BucketCreatedEvent {
+        bucket_id: object::id(&bucket),
+        bucket_admin_cap_id: object::id(&bucket_admin_cap),
+    });
 
     (bucket, bucket_admin_cap)
 }
@@ -68,7 +79,7 @@ public fun borrow_blob(
     let blob = self.blobs.remove(blob_id);
     let promise = ReturnBlobPromise {
         blob_id: blob_id,
-        bucket_id: self.id(),
+        bucket_id: self.id.to_inner(),
     };
     (blob, promise)
 }
@@ -82,7 +93,7 @@ public fun return_blob(
 ) {
     self.authorize(cap);
 
-    assert!(promise.bucket_id == self.id(), EInvalidBucket);
+    assert!(promise.bucket_id == self.id.to_inner(), EInvalidBucket);
     assert!(self.blobs.contains(promise.blob_id), EInvalidBlob);
 
     self.blobs.add(promise.blob_id, blob);
@@ -102,16 +113,11 @@ public(package) fun blobs(self: &Bucket): &ObjectTable<u256, Blob> {
     &self.blobs
 }
 
-// Get the `ID` of a `Bucket`.
-public fun id(self: &Bucket): ID {
-    self.id.to_inner()
-}
-
 // Get the number of `Blob` objects in a `Bucket`.
 public fun blob_count(self: &Bucket): u64 {
     self.blob_count
 }
 
 public(package) fun authorize(self: &Bucket, cap: &BucketAdminCap) {
-    assert!(self.id() == cap.bucket_id, EInvalidBucket);
+    assert!(self.id.to_inner() == cap.bucket_id, EInvalidBucket);
 }
