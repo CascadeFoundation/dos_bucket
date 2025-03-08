@@ -28,7 +28,7 @@ public fun new(
     // Create and return a `StoredBlob`.
     StoredBlob {
         id: object::new(ctx),
-        bucket_id: bucket.id(),
+        bucket_id: object::id(bucket),
         blob_id: blob_id,
         blob_size: blob.size(),
         blob_encoding_type: blob.encoding_type(),
